@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbac-manager
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rbac-manager
+
+  template:
+    metadata:
+      labels:
+        app: rbac-manager
+
+    spec:
+      containers:
+      - name: backend
+        image: rbac-manager:latest
+        ports:
+        - containerPort: 8000

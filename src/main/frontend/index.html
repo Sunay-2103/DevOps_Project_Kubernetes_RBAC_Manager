@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RBAC Manager</title>
+</head>
+<body>
+
+<h1>RBAC Manager</h1>
+
+<button onclick="getRoles()">Get Roles</button>
+
+<ul id="roles"></ul>
+
+<script>
+function getRoles() {
+    fetch("http://127.0.0.1:8000/roles")
+    .then(res => res.json())
+    .then(data => {
+        let list = document.getElementById("roles");
+        list.innerHTML = "";
+        data.forEach(role => {
+            let li = document.createElement("li");
+            li.innerText = role.name + " (" + role.namespace + ")";
+            list.appendChild(li);
+        });
+    })
+    .catch(err => console.error(err));
+}
+</script>
+
+</body>
+</html>
