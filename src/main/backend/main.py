@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from kubernetes import client, config
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,25 +12,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-config.load_kube_config()
+def load_cluster(context="minikube"):
+    config.load_kube_config(context=context)
 
 @app.get("/")
 def home():
     return {"message": "RBAC Manager Running"}
 
 @app.get("/roles")
-def get_roles():
+def get_roles(context: str = Query("minikube")):
+    load_cluster(context)
     api = client.RbacAuthorizationV1Api()
     roles = api.list_role_for_all_namespaces()
     
     result = []
     for r in roles.items:
-        result.append({
-            "name": r.metadata.name,
-            "namespace": r.metadata.namespace
-        })
+    	result.append({
+        	"name": r.metadata.name,
+        	"namespace": r.metadata.namespace,
+        	"rules": [rule.to_dict() for rule in r.rules] if r.rules else [],
+        	"status": "Safe"
+    	})
     return result
-
+   
 @app.post("/create-role")
 def create_role(name: str, namespace: str):
     api = client.RbacAuthorizationV1Api()

@@ -80,6 +80,7 @@
 
     <h3>➕ Create Role</h3>
     <input id="name" placeholder="Role Name">
+    <input id="cluster" placeholder="Cluster name (minikube)">
     <input id="namespace" placeholder="Namespace">
     <button onclick="createRole()">Create Role</button>
 
@@ -88,30 +89,54 @@
 <script>
 
 function getRoles() {
-    fetch("http://127.0.0.1:8000/roles")
+
+    let context = document.getElementById("cluster")?.value || "minikube";
+
+    fetch(`http://127.0.0.1:8000/roles?context=${context}`)    
     .then(res => res.json())
     .then(data => {
 
         let container = document.getElementById("roles");
         container.innerHTML = "";
+ 
+    data.forEach(role => {
 
-        data.forEach(role => {
+    // 🔹 Determine Logs Access
+    let logsAccess = "NO ✅";
 
-            let statusClass = role.status === "⚠️ Over-permissive" ? "danger" : "safe";
-
-            let div = document.createElement("div");
-            div.className = "card";
-
-            div.innerHTML = `
-                <b>${role.name}</b><br>
-                Namespace: ${role.namespace}<br>
-                Status: <span class="${statusClass}">${role.status || "Safe"}</span>
-            `;
-
-            container.appendChild(div);
+    if (role.rules) {
+        role.rules.forEach(rule => {
+            if (rule.resources.includes("pods/log") || rule.resources.includes("*")) {
+                logsAccess = "YES ❌";
+            }
         });
-    })
-    .catch(err => console.error(err));
+    }
+
+    // 🔹 Status Styling
+    let statusClass = "safe";
+    if (role.status && role.status.includes("Over")) {
+        statusClass = "danger";
+    } else if (role.status && role.status.includes("Risky")) {
+        statusClass = "warning";
+    }
+
+    let div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+        <b>${role.name}</b><br>
+        Namespace: ${role.namespace}<br>
+        Status: <span class="${statusClass}">${role.status || "Safe"}</span><br>
+        Logs Access: <b>${logsAccess}</b><br><br>
+
+        <button style="margin-top: 8px;" onclick="deleteRole('${role.name}', '${role.namespace}')">Delete</button>
+    `;
+
+    container.appendChild(div);
+    
+    });
+    }) 
+  .catch(err => console.error(err));	
 }
 
 function createRole() {
