@@ -1,31 +1,179 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>RBAC Manager</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 22px;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 10px 0;
+            border: none;
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .card {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .safe {
+            color: green;
+            font-weight: bold;
+        }
+
+        .danger {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
 </head>
+
 <body>
 
-<h1>RBAC Manager</h1>
+<header>
+    Kubernetes RBAC Policy Manager
+</header>
 
-<button onclick="getRoles()">Get Roles</button>
+<div class="container">
 
-<ul id="roles"></ul>
+    <h3>📋 Roles</h3>
+    <button onclick="getRoles()">Load Roles</button>
+    <button onclick="getBindings()">Show Role Bindings</button>
+    <div id="roles"></div>
+
+    <h3>➕ Create Role</h3>
+    <input id="name" placeholder="Role Name">
+    <input id="namespace" placeholder="Namespace">
+    <button onclick="createRole()">Create Role</button>
+
+</div>
 
 <script>
+
 function getRoles() {
     fetch("http://127.0.0.1:8000/roles")
     .then(res => res.json())
     .then(data => {
-        let list = document.getElementById("roles");
-        list.innerHTML = "";
+
+        let container = document.getElementById("roles");
+        container.innerHTML = "";
+
         data.forEach(role => {
-            let li = document.createElement("li");
-            li.innerText = role.name + " (" + role.namespace + ")";
-            list.appendChild(li);
+
+            let statusClass = role.status === "⚠️ Over-permissive" ? "danger" : "safe";
+
+            let div = document.createElement("div");
+            div.className = "card";
+
+            div.innerHTML = `
+                <b>${role.name}</b><br>
+                Namespace: ${role.namespace}<br>
+                Status: <span class="${statusClass}">${role.status || "Safe"}</span>
+            `;
+
+            container.appendChild(div);
         });
     })
     .catch(err => console.error(err));
 }
+
+function createRole() {
+    let name = document.getElementById("name").value;
+    let namespace = document.getElementById("namespace").value;
+
+    fetch(`http://127.0.0.1:8000/create-role?name=${name}&namespace=${namespace}`, {
+        method: "POST"
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        getRoles(); // refresh automatically
+    });
+}
+
+console.log("NEW VERSION LOADED");
+
+function deleteRole(name, namespace) {
+    fetch(`http://127.0.0.1:8000/delete-role?name=${name}&namespace=${namespace}`, {
+        method: "DELETE"
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        getRoles();
+    });
+}
+
+function filterRoles() {
+    let input = document.getElementById("search").value.toLowerCase();
+    let cards = document.querySelectorAll(".card");
+
+    cards.forEach(card => {
+        let text = card.innerText.toLowerCase();
+        card.style.display = text.includes(input) ? "block" : "none";
+    });
+}
+
+function getBindings() {
+    fetch("http://127.0.0.1:8000/bindings")
+    .then(res => res.json())
+    .then(data => {
+
+        let container = document.getElementById("roles");
+        container.innerHTML = "<h3>Role Bindings</h3>";
+
+        data.forEach(b => {
+            let div = document.createElement("div");
+            div.className = "card";
+
+            div.innerHTML = `
+                <b>${b.name}</b><br>
+                Namespace: ${b.namespace}<br>
+                Subjects: ${b.subjects.join(", ")}
+            `;
+
+            container.appendChild(div);
+        });
+    });
+}
+
 </script>
 
 </body>

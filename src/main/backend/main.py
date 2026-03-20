@@ -57,3 +57,24 @@ def delete_role(name: str, namespace: str):
     api = client.RbacAuthorizationV1Api()
     api.delete_namespaced_role(name, namespace)
     return {"message": f"Role {name} deleted"}
+
+@app.get("/bindings")
+def get_bindings():
+    api = client.RbacAuthorizationV1Api()
+    bindings = api.list_role_binding_for_all_namespaces()
+    
+    result = []
+    for b in bindings.items:
+        subjects = []
+
+        if b.subjects is not None:
+            for s in b.subjects:
+                subjects.append(f"{s.kind}:{s.name}")
+
+        result.append({
+            "name": b.metadata.name,
+            "namespace": b.metadata.namespace,
+            "subjects": subjects if subjects else ["None"]
+        })
+
+    return result
